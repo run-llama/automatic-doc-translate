@@ -14,14 +14,6 @@ const octokit = new Octokit({
     auth: process.env["GITHUB_PERSONAL_ACCESS_TOKEN"]
 })
   
-  
-
-async function main() {
-  const chatCompletion = await openai.chat.completions.create({
-    messages: [{ role: 'user', content: 'Say this is a test' }],
-    model: 'gpt-3.5-turbo',
-  });
-}
 
 async function getLastFileVersion(owner, repoName, path) {
     let docFiles = [];
@@ -75,11 +67,15 @@ async function listDocFiles(files, owner, repoName, path) {
 async function loadFiles(owner, repoName, files) {
     
     for (let file of files) {
-        const response = await fetch(file.download_url);
-        const text = await response.text();
-        
-        file.raw = text;
-        file.token = encode(text).length;
+        // do not reload file if already loaded
+        if (!file.raw) {
+            const response = await fetch(file.download_url);
+            const text = await response.text();
+            
+            file.raw = text;
+            file.token = encode(text).length;
+        }
+      
     }
 }
  
@@ -109,7 +105,7 @@ function parseMdStrToTree(file) {
 // a function that take a document hierarchical object and return a md file as a string
 function parseTreeToMdStr(doc, code='') {
     let str = '';
-
+    console.log(JSON.stringify(doc, null, 2));
     for (let block of doc) {
         if (code) {
             str += '#'.repeat(block.level) + ' ' + block[`title_${code}`][0] + '\n';
@@ -132,8 +128,9 @@ function sleep(ms) {
 async function translateTextTree(textTree, language, temp=0) {
          
     let text = parseTreeToMdStr(textTree);
+    let messages = [];
     try {
-        let messages = [
+         messages = [
             {
                 "role": "system",
                 "content": `Your are task with translating a technical documentation in ${language}. The user will provide the documentation in a markdown format. Translate it to ${language}. Only output the translated documentation in Markdown, do not add or remove content. Do not try to translate function/api endpoint name, only translate the documentation. If the documentation contain codeblocks, only translate commentaries, do not translate variablenames / function names. Try to output it in a {language} that is easy to read, do not try to translate all expressions verbatim, make it so it feel professional. If {language} usually use the enlish word for a thing, keep it in English. Notes: it's a computer doc, build mean 'compile', watch mean 'looking at file that change', ... Keep the same structure as the original documentation, and retain ALL the links / images.`,
@@ -145,11 +142,11 @@ async function translateTextTree(textTree, language, temp=0) {
         ];
         const chatCompletion = await openai.chat.completions.create({
             messages: messages,
-            model: 'gpt-3.5-turbo',
+            model: 'gpt-3.5-turbo-1106',
             temperature: temp
         });
 
-        console.log(chatCompletion.choices[0].message.content)
+       // console.log(chatCompletion.choices[0].message.content)
 
 
         let translationTree = parseMdStrToTree(chatCompletion.choices[0].message.content);
@@ -194,10 +191,12 @@ async function translateTextTree(textTree, language, temp=0) {
                 });
             }
 
+            console.log("=======\nRejectd", JSON.stringify(messages, null, 2));
+
 
             chatCompletion = await openai.chat.completions.create({
                 messages: messages,
-                model: 'gpt-3.5-turbo-16k',
+                model: 'gpt-3.5-turbo-1106',
                 temperature: temp
             });
             translationTree = parseMdStrToTree(chatCompletion.choices[0].message.content);
@@ -213,6 +212,7 @@ async function translateTextTree(textTree, language, temp=0) {
     catch (e) {
         console.log(e);
         console.log('sleeping');
+        console.log("=======\eerror on ", JSON.stringify(messages, null, 2));
         await sleep(30000)
         return translateTextTree(textTree, language, temp);
     }
@@ -243,6 +243,14 @@ async function translateFile(file, language, code) {
         }
 
         let translationTree = await translateTextTree(blocks, language, 0);
+        
+        if (translationTree.length != blocks.length) { 
+            if (!file.translationError) {
+                file.translationError = {};
+            }
+            file.translationError[code] = true;
+
+        }
 
         for (let j = 0; j < blocks.length; j++) {
             if (!blocks[j]["title_" + code]) {
@@ -251,9 +259,11 @@ async function translateFile(file, language, code) {
             if (!blocks[j]["content_" + code]) {
                 blocks[j]["content_" + code] = []
             }
-            blocks[j]["title_" + code].push(translationTree[j].title);
-            blocks[j]["content_" + code].push(translationTree[j].content);
+
+            blocks[j]["title_" + code].push(translationTree[j]?.title || '\n');
+            blocks[j]["content_" + code].push(translationTree[j]?.content || '\n');
         }
+
     }
 
 }
@@ -264,6 +274,7 @@ async function translateFiles(files, language, code, savepath) {
     for (let file of files) {
         started_jobs++;
         let fn = async function() {
+            console.log("translating:", file.name);
             await translateFile(file, language, code);
             await fs.writeFile(savepath, JSON.stringify(files, null, 2), 'utf8');
             finished_jobs++;
@@ -281,7 +292,9 @@ async function translateFiles(files, language, code, savepath) {
 async function correctLinkInFile(file, languageCode, docDir) {
     for (let block of file.doc) { 
         // find all markdown local link in block.content, BUT NOT IMAGES
-        console.log(block,  block[`content_${languageCode}`][0], `content_${languageCode}`);
+        if (!block[`content_${languageCode}`]) {
+            continue
+        }
     
         let matchesTranslated = block[`content_${languageCode}`][0].match(/\[.*\]\(.*\)/g);
 
@@ -333,6 +346,11 @@ async function buildOutputMd(files, owner, repoName, repoDocDir, languageCode) {
     let targetDir = `${__dirname}/build/${owner}/${repoName}/${repoDocDir}/${languageCode}`;
     
     for (let file of files) {
+        // check if file is translated in target language
+        if (!file.doc || file.doc[0][`content_${languageCode}`] === undefined) { 
+            continue
+        }
+
         await correctLinkInFile(file, languageCode);
 
         let translatedMd = parseTreeToMdStr(file.doc, languageCode);  
@@ -362,7 +380,7 @@ async function printFiles(files, owner, repoName, repoDocDir) {
         let dir = '';
         for (let i = 0; i < dirs.length - 1; i++) {
             dir += dirs[i] + '/';
-            try {
+            try {xw
                 await fs.access(dir);
             } catch (error) {
                 await fs.mkdir(dir);
@@ -376,25 +394,37 @@ async function translateDoc(owner, repoName, repoDocDir, language, code) {
     
     // const files = await listDocFiles(owner, repoName, repoDocDir);
     let files = [];
-    let savepath  = `${__dirname}/tmp/save-${owner}-${repoName}.json`;
+    let savepath  = `${__dirname}/save/${owner}/${repoName}.json`;
     try {
         await fs.access(savepath);
         files = require(savepath)
     } catch {
-       
+        // create the save oath
+        let dirs = savepath.split('/');
+        let dir = '';
+        for (let i = 0; i < dirs.length - 1; i++) {
+            dir += dirs[i] + '/';
+            try {
+                await fs.access(dir);
+            } catch (error) {
+                await fs.mkdir(dir);
+            }
+        }
     }
     
     await listDocFiles(files, owner, repoName, repoDocDir);
 
     await loadFiles(owner, repoName, files);
     
-    await printFiles(files, owner, repoName, repoDocDir);
+    // await printFiles(files, owner, repoName, repoDocDir);
  
     await translateFiles(files, language, code, savepath);
 
-    await buildOutputMd(files, owner, repoName, repoDocDir, code)
+    // await buildOutputMd(files, owner, repoName, repoDocDir, code)
 }
 
-
+// translateDoc('nodejs', 'node', 'doc', 'French', 'fr');
 translateDoc('run-llama', 'llama_index', 'docs', 'French', 'fr')
+// translateDoc('run-llama', 'llama_index', 'docs', 'Simplified Chinese(zh_cn)', 'zh_cn')
+
 module.exports = translateDoc;

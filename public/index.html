@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head> 
+        <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+        <style>
+
+            body {
+                margin: 0px;
+                font-family: 'Roboto', sans-serif;
+                font-size: 14px;
+                font-weight: normal;
+                line-height: 1.5;
+                color: #333;
+                background-color: #f4f4f4;
+            }
+
+            #app {
+                display: flex;
+                flex-direction: column;
+                height: 100vh; /* This will make #app take up the full height of the viewport */
+            }
+
+            .navbar {
+                background-color: #333;
+                color: white;
+                padding: 15px;
+                font-size: 14px;
+                font-weight: bold;
+            }
+ 
+             .file-explorer {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: flex-start;
+                align-content: flex-start;
+                flex-wrap: nowrap;
+                overflow-y: auto; /* This will add a scrollbar if the content is too long */
+                flex-grow: 1; /* This will make .file-explorer take up the remaining space in #app */
+            }
+
+            .file-list {
+                display: flex;
+                flex-direction: column;
+                overflow-y: auto;
+                flex-wrap: wrap;
+                flex-basis: 300px;
+                border-right: 1px solid #eee;
+            }
+
+            .file-item {
+                padding: 4px;
+                margin: 0px;
+                cursor: pointer;
+            }
+
+            .file-name {
+                font-size: 14px;
+                font-weight: bold;
+            }
+
+            .file-overview {
+                flex-grow: 1;
+                flex-shrink: 1;
+                flex-basis: 0;
+                display: flex;
+                flex-direction: column;
+                flex-wrap: wrap;
+            }
+
+            .file-block {
+                flex-grow: 1;
+                flex-shrink: 1;
+                flex-basis: 0;
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+
+            .initial, .translation  {
+                flex: 1;
+                padding: 10px;
+                box-sizing: border-box;
+                border: 1px solid #eee;
+            }
+
+            .file-overview .title {
+                font-size: 14px;
+                font-weight: bold;
+                padding : 0px;
+                margin: 0px;
+            }
+
+            .file-overview .content {
+                font-size: 12px;
+                padding : 0px;
+                margin: 0px;
+            }
+
+           
+            pre {
+                white-space: pre-wrap; /* CSS 2.1 */
+                white-space: -moz-pre-wrap; /* For Mozilla */
+                white-space: -pre-wrap; /* For Opera 4-6 */
+                white-space: -o-pre-wrap; /* For Opera 7 */
+                word-wrap: break-word; /* For IE 5.5+ and modern browsers */
+                overflow-wrap: anywhere; /* This will break the word at any character to prevent overflow */
+            }
+            
+            .home-repo {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                align-content: center;
+                flex-wrap: nowrap;
+                overflow-y: auto; /* This will add a scrollbar if the content is too long */
+                flex-grow: 1; /* This will make .file-explorer take up the remaining space in #app */
+            }
+
+            .home-repo-input {
+                padding: 10px;
+                font-size: 14px;
+                font-weight: bold;
+                border: 1px solid #eee;
+                border-radius: 5px;
+                margin-right: 10px;
+            }
+
+            .home-repo-button {
+                padding: 10px;
+                font-size: 14px;
+                font-weight: bold;
+                border: 1px solid #eee;
+                border-radius: 5px;
+                background-color: #eee;
+                cursor: pointer;
+            }
+
+            .home-repo-button:hover {
+                background-color: #ddd;
+            }
+
+            .home-repo-input:focus {
+                outline: none;
+            }
+
+            .home-repo-input:hover {
+                border: 1px solid #ddd;
+            }
+
+            .home-repo-input:active {
+                border: 1px solid #ddd;
+            }
+
+            .home-repo-language-select {
+                padding: 10px;
+                font-size: 14px;
+                font-weight: bold;
+                border: 1px solid #eee;
+                border-radius: 5px;
+                margin-right: 10px;
+            }
+
+            .home-repo-language-select:focus {
+                outline: none;
+            }
+
+            .home-repo-language-select:hover {
+                border: 1px solid #ddd;
+            }
+
+            .home-repo-language-select:active {
+                border: 1px solid #ddd;
+            }
+
+
+
+            .spinner {
+                border: 16px solid #f3f3f3;
+                border-top: 16px solid #3498db;
+                border-radius: 50%;
+                width: 80px;
+                height: 80px;
+                animation: spin 2s linear infinite;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            .loading-page {
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                align-content: center;
+                flex-wrap: nowrap;
+                overflow-y: auto;
+                flex-grow: 1;
+                background-color: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            }
+
+            .not-translated {
+                color: rgb(232, 125, 125);
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <div v-if="loading" class="loading-page">
+                <!-- Loading page -->
+                <div class="spinner"></div>
+                <div><br/>Loading...</div>
+
+            </div>
+            <div v-else-if="targetRepository">
+                <div class="navbar">
+                    Translate your doc - {{targetRepository}} -> <select v-model="targetLanguage">
+                        <option value="fr">fr</option>
+                        <option value="zh_cn">zh_cn</option>
+                    </select>
+                </div>
+                <div class="file-explorer"> 
+                    <div class='file-list'>
+                        <div class='file-item' v-for="(item, index) in files" v-if="files">
+                            <div class='file-name'  v-on:click="changeFile(index)"  :class="fileStatusClass(item)">{{item.path}}</div>
+                        </div> 
+                    </div> 
+
+                    <div class='file-overview'>
+                        <div class='file-block'  v-for="block in file.doc" v-if="file">      
+                            <div class="initial" contenteditable="false">
+                                <pre class="title" v-if="block.title.length"><span v-for="n in block.level" key="n">#</span>{{block.title}}</pre>
+                                <pre class="content" v-if="block.content.length">{{block.content}}</pre>
+                            </div>
+                            <div class="translation" v-if="block[targetLanguageTitle].length || block[targetLanguageContent].length">
+                                <pre class="title" v-if="block[targetLanguageTitle].length"><span v-for="n in block.level" key="n">#</span><span contenteditable>{{block[targetLanguageTitle][0]}}</span></pre>
+                                <pre class="content" v-if="block[targetLanguageContent].length" contenteditable>{{block[targetLanguageContent][0]}}</pre>
+                            </div>
+                        </div>
+        
+                    </div>
+                </div>
+            </div>
+            <div v-else>
+                <div>
+     
+                    <div class="home-repo">
+                        <h1>Grab a repo from Github, and translate it's docs</h1>
+                        <div>
+                            <h2>Translate repo: </h2>  
+                            <input class="home-repo-input" type="text" v-model=inputValue placeholder="user/repo"></input>
+                        
+                        <label> to </label>  
+
+                        <select class="home-repo-language-select" v-model="targetLanguage">
+                            <option value="fr">fr</option>
+                            <option value="zh_cn">zh_cn</option>
+                        </select>
+
+                        <button class="home-repo-button" @click="translate()">Go!</button>
+                        </div>  
+                    </div>                    
+
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const { createApp, ref, onMounted, watch} = Vue
+            const app = createApp({
+                setup() {
+                    const files = ref(null);
+                    const file = ref(null); // Initialize file as null
+                    const targetRepository = ref(""); // "run-llama/llama_index";
+                    const loading = ref(false);
+                    const fileLoaded = ref(false);
+                    const inputValue = ref("");
+                    const targetLanguage = ref("fr");
+                    const targetLanguageTitle = ref("title_fr");
+                    const targetLanguageContent = ref("content_fr");
+
+                    watch(targetLanguage, (newVal, oldVal) => {
+                        // Update targetLanguageTitle and targetLanguageContent based on newVal
+                        targetLanguageTitle.value = `title_${newVal}`;
+                        targetLanguageContent.value = `content_${newVal}`;
+                    });
+
+                    const changeFile = (index) => {
+                        file.value = files.value[index];
+                    };
+
+       
+
+                    const translate = async () => {
+                        targetRepository.value = inputValue.value; 
+                        console.log("translate", targetRepository.value);
+                        loading.value = "Translating..." + targetRepository.value;
+                        loading.value = true;
+                        const response = await fetch(targetRepository.value + ".json");
+                        const data = await response.json();
+                        files.value = data;
+                        file.value = data[0];
+                        loading.value = false;
+                        fileLoaded.value = true;
+                    };
+
+                    const fileStatusClass = (item) => {
+                        if (!item.doc) {
+                            return "not-translated";
+                        } else {
+                            return "translated";
+                        }
+                        ;   
+                    };
+                        
+                    
+                    return {
+                        files,
+                        file,
+                        targetRepository,
+                        loading,
+                        fileLoaded,
+                        inputValue,
+                        targetLanguage,
+                        targetLanguageTitle,
+                        targetLanguageContent,
+                        changeFile,
+                        translate,
+                        fileStatusClass
+                    };
+                }
+            }).mount('#app')
+            
+
+
+        
+        </script>
+    </body>
+</html>
