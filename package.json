@@ -1,13 +1,13 @@
 {
-  "name": "autotranslatedocjs",
-  "version": "1.0.0",
+  "name": "autotranslatedoc",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "bin": {
-    "hello": "./cli.js"
+    "autotranslatedoc": "./cli.js"
   },
   "author": "pierre@pld.io",
   "license": "ISC",
@@ -26,6 +26,6 @@
   "bugs": {
     "url": "https://github.com/hexapode/automaticDocTranslation/issues"
   },
-  "homepage": "https://github.com/hexapode/automaticDocTranslation/#readme",
+  "homepage": "https://github.com/hexapode/automaticDocTranslation/#readme"
 }
 
