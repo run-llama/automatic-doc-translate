@@ -12,8 +12,12 @@ First install
     npm install -g autotranslatedoc
 ```
 
-Then make sure you set up the following environment variables:
-```GITHUB_PERSONAL_ACCESS_TOKEN``` and ```OPENAI_API_KEY```
+Then make sure you set up the following environment variables: ```GITHUB_PERSONAL_ACCESS_TOKEN``` and ```OPENAI_API_KEY```. Alternatively you can pass this token in parameter
+
+To see helppage
+```
+ autotranslatedoc -h
+```
 
 Then translate the doc of a target repo in french and spanish
 ```
