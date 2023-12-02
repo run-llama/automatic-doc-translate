@@ -342,8 +342,8 @@ async function correctLinkInFile(file, languageCode, docDir) {
 
 }
 
-async function buildOutputMd(files, owner, repoName, repoDocDir, languageCode) { 
-    let targetDir = `${__dirname}/build/${owner}/${repoName}/${repoDocDir}/${languageCode}`;
+async function buildOutputMd(files, languageCode, targetDir) { 
+    let targetDir = `${targetDir}/${languageCode}`;
     
     for (let file of files) {
         // check if file is translated in target language
@@ -390,11 +390,11 @@ async function printFiles(files, owner, repoName, repoDocDir) {
     }
 }
 
-async function translateDoc(owner, repoName, repoDocDir, language, code) {
+async function translateDoc(owner, repoName, repoDocDir, language, code, savePath, loadFile=true) {
     
     // const files = await listDocFiles(owner, repoName, repoDocDir);
     let files = [];
-    let savepath  = `${__dirname}/save/${owner}/${repoName}.json`;
+    let savepath  = `${savePath}/${owner}/${repoName}.json`;
     try {
         await fs.access(savepath);
         files = require(savepath)
@@ -412,19 +412,54 @@ async function translateDoc(owner, repoName, repoDocDir, language, code) {
         }
     }
     
-    await listDocFiles(files, owner, repoName, repoDocDir);
+    if (loadFile) {
+        await listDocFiles(files, owner, repoName, repoDocDir);
+        await loadFiles(owner, repoName, files);
+    }
 
-    await loadFiles(owner, repoName, files);
-    
-    // await printFiles(files, owner, repoName, repoDocDir);
- 
     await translateFiles(files, language, code, savepath);
-
-    // await buildOutputMd(files, owner, repoName, repoDocDir, code)
 }
 
+async function buildeDoc(owner, repoName, code, savePath, outputPath) {
+    
+    // const files = await listDocFiles(owner, repoName, repoDocDir);
+    let files = [];
+    let savepath  = `${savePath}/${owner}/${repoName}.json`;
+    try {
+        await fs.access(savepath);
+        files = require(savepath)
+    } catch {
+        throw new Error('No save file found, please run translate first');
+    }
+
+
+    let outPath  = `outputPath`;
+    try {
+        await fs.access(outPath);
+    } catch {
+        // create the out path
+        let dirs = outPath.split('/');
+        let dir = '';
+        for (let i = 0; i < dirs.length - 1; i++) {
+            dir += dirs[i] + '/';
+            try {
+                await fs.access(dir);
+            } catch (error) {
+                await fs.mkdir(dir);
+            }
+        }
+    }
+    
+    await buildOutputMd(files, code, outPath);
+}
+
+
 // translateDoc('nodejs', 'node', 'doc', 'French', 'fr');
-translateDoc('run-llama', 'llama_index', 'docs', 'French', 'fr')
+//translateDoc('run-llama', 'llama_index', 'docs', 'French', 'fr')
 // translateDoc('run-llama', 'llama_index', 'docs', 'Simplified Chinese(zh_cn)', 'zh_cn')
 
-module.exports = translateDoc;
+module.exports = 
+{
+    translateDoc: translateDoc,
+    buildeDoc: buildeDoc
+}
