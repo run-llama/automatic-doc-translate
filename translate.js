@@ -105,7 +105,6 @@ function parseMdStrToTree(file) {
 // a function that take a document hierarchical object and return a md file as a string
 function parseTreeToMdStr(doc, code='') {
     let str = '';
-    console.log(JSON.stringify(doc, null, 2));
     for (let block of doc) {
         if (code) {
             str += '#'.repeat(block.level) + ' ' + block[`title_${code}`][0] + '\n';
@@ -306,8 +305,8 @@ async function correctLinkInFile(file, languageCode, docDir) {
             continue;
         }
 
-        if (matchesNonTranslated?.length) {
-        
+        if (matchesNonTranslated?.length && matchesTranslated?.length) {
+            
             for (let [index, nonTranslatedMatch] of matchesNonTranslated.entries()) {
                 let translatedMatch = matchesTranslated[index];
 
@@ -327,9 +326,9 @@ async function correctLinkInFile(file, languageCode, docDir) {
                 urlText = urlText.substring(1, urlText.length - 1);
                 urlText = `[${urlText}]`;
 
-                console.log('Replace by', urlText + newUrl, 'match', translatedMatch);
+               // console.log('Replace by', urlText + newUrl, 'match', translatedMatch);
 
-                console.log( block[`content_${languageCode}`])
+               //  console.log( block[`content_${languageCode}`])
                 block[`content_${languageCode}`][0] = block[`content_${languageCode}`][0].replace(translatedMatch, urlText + newUrl);
 
 
@@ -342,8 +341,8 @@ async function correctLinkInFile(file, languageCode, docDir) {
 
 }
 
-async function buildOutputMd(files, languageCode, targetDir) { 
-    let targetDir = `${targetDir}/${languageCode}`;
+async function buildOutputMd(files, languageCode, rootTargetDir) { 
+    let targetDir = `${rootTargetDir}/${languageCode}`;
     
     for (let file of files) {
         // check if file is translated in target language
@@ -354,7 +353,8 @@ async function buildOutputMd(files, languageCode, targetDir) {
         await correctLinkInFile(file, languageCode);
 
         let translatedMd = parseTreeToMdStr(file.doc, languageCode);  
-        let path = file.path.replace(repoDocDir, targetDir);
+        let path = `${targetDir}/${file.path}`;
+
         // check if every directory in path exists and create if not
         let dirs = path.split('/');
         let dir = '';
@@ -420,7 +420,7 @@ async function translateDoc(owner, repoName, repoDocDir, language, code, savePat
     await translateFiles(files, language, code, savepath);
 }
 
-async function buildeDoc(owner, repoName, code, savePath, outputPath) {
+async function buildDoc(owner, repoName, code, savePath, outputPath) {
     
     // const files = await listDocFiles(owner, repoName, repoDocDir);
     let files = [];
@@ -433,7 +433,7 @@ async function buildeDoc(owner, repoName, code, savePath, outputPath) {
     }
 
 
-    let outPath  = `outputPath`;
+    let outPath  = outputPath;
     try {
         await fs.access(outPath);
     } catch {
@@ -461,5 +461,5 @@ async function buildeDoc(owner, repoName, code, savePath, outputPath) {
 module.exports = 
 {
     translateDoc: translateDoc,
-    buildeDoc: buildeDoc
+    buildDoc: buildDoc
 }

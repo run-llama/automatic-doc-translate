@@ -39,10 +39,6 @@ const program = commander
     .parse(process.argv);
 
 const options = program.opts();
-console.log(options);
-
-
-
 
 if (options.githubtoken) {
     process.env.GITHUB_PERSONAL_ACCESS_TOKEN = options.githubtoken;
@@ -53,10 +49,11 @@ if (options.openaikey) {
 
 
 async function run() {
+    const translate = require('./translate');
+
     switch (program.processedArgs[0]) {
 
         case 'translate':
-            const translate = require('./translate');
             
             let loadFile = true;
             for (let langCode of options.language) { 
@@ -76,7 +73,6 @@ async function run() {
             
             break;
         case 'update':
-            const translate = require('./translate');
 
             for (let langCode of options.language) { 
                 console.log("Updating translation in " + langCode);
@@ -97,7 +93,8 @@ async function run() {
             require('./serve');
             break;
         case 'build':
-            for (let langCode of options.language) { 
+            for (let langCode of options.language) {
+                console.log("Building translation Md " + langCode + " to " + options.outputPath); 
                 translate.buildDoc(
                     program.args[1],
                     program.args[2],
