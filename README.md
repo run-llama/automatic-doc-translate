@@ -1,4 +1,4 @@
-# autotranslate doc
+# Automatic doc translation with OpenAI
 
 A tool that automatically transalte the doc (every .md files) in a github repo using OPEN AI GPT 3.5
 
