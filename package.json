@@ -18,5 +18,14 @@
     "github-api": "^3.4.0",
     "gpt-tokenizer": "^2.1.2",
     "openai": "^4.20.1"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hexapode/automaticDocTranslation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hexapode/automaticDocTranslation/issues"
+  },
+  "homepage": "https://github.com/hexapode/automaticDocTranslation/#readme",
 }
+
