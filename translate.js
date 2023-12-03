@@ -30,7 +30,7 @@ async function getLastFileVersion(owner, repoName, path) {
             const files = await getLastFileVersion(owner, repoName, file.path);
             docFiles = docFiles.concat(files);
         }
-        if (file.type === 'file' && file.name.endsWith('.md')) {
+        if (file.type === 'file' && (file.name.endsWith('.md') || file.name.endsWith('.mdx'))) {
             docFiles.push(file);
         }
     }
@@ -78,12 +78,13 @@ async function loadFiles(owner, repoName, files) {
       
     }
 }
- 
+
 // a function that takes a md file as a string and return a document hierarchical object
 function parseMdStrToTree(file) {
     const lines = file.split('\n');
     const doc = [];
-    let section = null;
+    let section = { title: '', level: 0, content: '' };
+    doc.push(section);
     for (let line of lines) {
         const match = line.match(/^(#{1,6}) /);
         if (match) {
@@ -95,7 +96,7 @@ function parseMdStrToTree(file) {
                 content: ''
             };
             doc.push(section);
-        } else if (section) {
+        } else {
             section.content += line + '\n';
         }
     }
@@ -107,7 +108,9 @@ function parseTreeToMdStr(doc, code='') {
     let str = '';
     for (let block of doc) {
         if (code) {
-            str += '#'.repeat(block.level) + ' ' + block[`title_${code}`][0] + '\n';
+            if (block.level > 0) { 
+                str += '#'.repeat(block.level) + ' ' + block[`title_${code}`][0] + '\n';
+            }
             str += block[`content_${code}`][0] + '\n';
         }
         else {
@@ -140,7 +143,8 @@ Guidelines:
 - Do not try to translate function/api endpoint name, only translate the documentation. 
 - If the documentation contain codeblocks, only translate commentaries, do not translate variable names / function names.
 - Try to output it in ${language} that is easy to read, do not try to translate all expressions verbatim, make it so it feel professional. 
-- If ${language} usually use the english word for a thing, keep it in English. 
+- If ${language} usually use the english word for a thing, keep it in English.
+- Module names should be kept in English, add best effort translation. Always keep the original name in parenthesis, e.g. "聊天引擎 (ChatEngine)"
 
 Additional Notes:
 - it's a computer doc, build mean 'compile', watch mean 'looking at file that change',

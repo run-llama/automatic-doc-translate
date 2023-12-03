@@ -6,7 +6,7 @@ const supportedLanguages = require('./supportedLanguages.json');
 const { version } = require('./package.json');
 
 
-const validCommands = ['translate', 'update', 'serve', 'build'];
+const validCommands = ['translate', 'update', 'serve', 'build' , 'run'];
 
 
 
@@ -52,10 +52,11 @@ if (options.openaikey) {
 async function run() {
     const translate = require('./translate');
 
+    let loadFile = true;
+
     switch (program.processedArgs[0]) {
 
         case 'translate':
-            let loadFile = true;
             for (let langCode of options.language) { 
                 console.log("Translating to " + langCode);
                 await translate.translateDoc(
@@ -118,6 +119,49 @@ async function run() {
                 );
             }
             break;
+            case 'run':
+                // TODO: clean up this code
+                // both translate and build
+                loadFile = true;
+                for (let langCode of options.language) { 
+                    console.log("Translating to " + langCode);
+                    await translate.translateDoc(
+                        program.args[1], 
+                        program.args[2], 
+                        options.docPath, 
+                        supportedLanguages[langCode],
+                        options.language,
+                        options.savePath,
+                        loadFile
+                    );
+                    loadFile=false;
+                }
+
+                for (let langCode of options.language) {
+                    let outPath = ''
+                    let prefixToRemove = ''
+    
+                    if (options.mode == 'docusaurus') {
+                        console.log('Using docusaurus mode')
+                        outPath = options.outputPath + `/i18n/${langCode}/docusaurus-plugin-content-docs/current/`
+                        prefixToRemove = options.docPath
+                    } else {
+                        console.log('Using manual mode')
+                        outPath = options.outputPath + `/${langCode}`
+                        prefixToRemove = ''
+                    }
+    
+                    console.log("Building translation Md " + langCode + " to " + options.outputPath); 
+                    translate.buildDoc(
+                        program.args[1],
+                        program.args[2],
+                        langCode,
+                        options.savePath,
+                        outPath,
+                        prefixToRemove
+                    );
+                }
+                break;
      }
 }
 
