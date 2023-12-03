@@ -132,11 +132,24 @@ async function translateTextTree(textTree, language, temp=0) {
          messages = [
             {
                 "role": "system",
-                "content": `Your are task with translating a technical documentation in ${language}. The user will provide the documentation in a markdown format. Translate it to ${language}. Only output the translated documentation in Markdown, do not add or remove content. Do not try to translate function/api endpoint name, only translate the documentation. If the documentation contain codeblocks, only translate commentaries, do not translate variablenames / function names. Try to output it in a {language} that is easy to read, do not try to translate all expressions verbatim, make it so it feel professional. If {language} usually use the enlish word for a thing, keep it in English. Notes: it's a computer doc, build mean 'compile', watch mean 'looking at file that change', ... Keep the same structure as the original documentation, and retain ALL the links / images.`,
+                "content": `
+You are a expert technical writer. Your goal is to translate a technical documentation in ${language}. The user will provide the documentation in a markdown format. Translate it to ${language}. 
+
+Guidelines:
+- Only output the translated documentation in Markdown, do not add or remove content. 
+- Do not try to translate function/api endpoint name, only translate the documentation. 
+- If the documentation contain codeblocks, only translate commentaries, do not translate variable names / function names.
+- Try to output it in ${language} that is easy to read, do not try to translate all expressions verbatim, make it so it feel professional. 
+- If ${language} usually use the english word for a thing, keep it in English. 
+
+Additional Notes:
+- it's a computer doc, build mean 'compile', watch mean 'looking at file that change',
+- Keep the same structure as the original documentation, and retain ALL the links / images.,
+`,
             },
             {
                 "role": "user",
-                "content": `The markdown to translate (remeber do not add extra content or remove content, just translate verbatim).\n Do not expend on content, only translate the documentation. The proposed text to translate may only contain a title, in this case only translate the titel. Original in English:\n\n ${text} "\n\nTranslation in ${language}:\n\n`
+                "content": `The markdown to translate (remember do not add extra content or remove content, just translate verbatim).\n Do not expend on content, only translate the documentation. The proposed text to translate may only contain a title, in this case only translate the title. Original in English:\n\n ${text} "\n\nTranslation in ${language}:\n\n`
             }
         ];
         const chatCompletion = await openai.chat.completions.create({
@@ -341,8 +354,9 @@ async function correctLinkInFile(file, languageCode, docDir) {
 
 }
 
-async function buildOutputMd(files, languageCode, rootTargetDir) { 
-    let targetDir = `${rootTargetDir}/${languageCode}`;
+async function buildOutputMd(files, languageCode, targetDir, prefixToRemove) { 
+
+    console.log('Prefix to remove', prefixToRemove)
     
     for (let file of files) {
         // check if file is translated in target language
@@ -353,7 +367,8 @@ async function buildOutputMd(files, languageCode, rootTargetDir) {
         await correctLinkInFile(file, languageCode);
 
         let translatedMd = parseTreeToMdStr(file.doc, languageCode);  
-        let path = `${targetDir}/${file.path}`;
+        let filePath = file.path.replace(prefixToRemove, '');
+        let path = `${targetDir}/${filePath}`;
 
         // check if every directory in path exists and create if not
         let dirs = path.split('/');
@@ -366,6 +381,7 @@ async function buildOutputMd(files, languageCode, rootTargetDir) {
                 await fs.mkdir(dir);
             }
         }
+        console.log(path); 
         await fs.writeFile(path, translatedMd, 'utf8');
     }
 }
@@ -420,7 +436,7 @@ async function translateDoc(owner, repoName, repoDocDir, language, code, savePat
     await translateFiles(files, language, code, savepath);
 }
 
-async function buildDoc(owner, repoName, code, savePath, outputPath) {
+async function buildDoc(owner, repoName, code, savePath, outputPath, prefixToRemove) {
     
     // const files = await listDocFiles(owner, repoName, repoDocDir);
     let files = [];
@@ -450,13 +466,13 @@ async function buildDoc(owner, repoName, code, savePath, outputPath) {
         }
     }
     
-    await buildOutputMd(files, code, outPath);
+    await buildOutputMd(files, code, outPath, prefixToRemove);
 }
 
 
 // translateDoc('nodejs', 'node', 'doc', 'French', 'fr');
 //translateDoc('run-llama', 'llama_index', 'docs', 'French', 'fr')
-// translateDoc('run-llama', 'llama_index', 'docs', 'Simplified Chinese(zh_cn)', 'zh_cn')
+// translateDoc('run-llama', 'LlamaIndexTS', 'apps/docs/docs', 'Simplified Chinese(zh-Hans)', 'zh-Hans', './save')
 
 module.exports = 
 {

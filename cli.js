@@ -25,10 +25,11 @@ const program = commander
 
 
     .option('-o, --outputPath <directory_path>',`The directory to output the translated files to, defaults to "./build"`, './build')
-    .option('-s, --savePath <directory_path>',`The directory to read the source files from, defaults to "./save"`, `${__dirname}/save`) 
+    .option('-s, --savePath <directory_path>',`The directory to read the source files from, defaults to "./save"`, `./save`) 
 
     .option('-gt, --githubtoken <token>', 'The GitHub token PAT to use for authentication, default to the value of the GITHUB_PERSONAL_ACCESS_TOKEN environment variable')
     .option('-ok, --openaikey <key>', 'The OpenAI key to use for authentication, default to the value of the OPENAI_API_KEY environment variable')
+    .option('-m, --mode <mode>', 'The documentation mode to use, either "manual" or "docusaurus", defaults to "docusaurus"', 'manual')
 
     .action((command) => {
         if (!validCommands.includes(command)) {
@@ -54,7 +55,6 @@ async function run() {
     switch (program.processedArgs[0]) {
 
         case 'translate':
-            
             let loadFile = true;
             for (let langCode of options.language) { 
                 console.log("Translating to " + langCode);
@@ -94,13 +94,27 @@ async function run() {
             break;
         case 'build':
             for (let langCode of options.language) {
+                let outPath = ''
+                let prefixToRemove = ''
+
+                if (options.mode == 'docusaurus') {
+                    console.log('Using docusaurus mode')
+                    outPath = options.outputPath + `/i18n/${langCode}/docusaurus-plugin-content-docs/current/`
+                    prefixToRemove = options.docPath
+                } else {
+                    console.log('Using manual mode')
+                    outPath = options.outputPath + `/${langCode}`
+                    prefixToRemove = ''
+                }
+
                 console.log("Building translation Md " + langCode + " to " + options.outputPath); 
                 translate.buildDoc(
                     program.args[1],
                     program.args[2],
                     langCode,
                     options.savePath,
-                    options.outputPath
+                    outPath,
+                    prefixToRemove
                 );
             }
             break;
