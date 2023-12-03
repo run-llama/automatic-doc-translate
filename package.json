@@ -17,6 +17,7 @@
     "express": "^4.18.2",
     "github-api": "^3.4.0",
     "gpt-tokenizer": "^2.1.2",
+    "llamaindex": "^0.0.37",
     "openai": "^4.20.1"
   },
   "repository": {
@@ -28,4 +29,3 @@
   },
   "homepage": "https://github.com/hexapode/automaticDocTranslation/#readme"
 }
-

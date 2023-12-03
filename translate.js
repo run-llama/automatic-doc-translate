@@ -1,14 +1,14 @@
 const fs = require('fs/promises');
 
-const OpenAI = require('openai');
+const { OpenAI }  = require("llamaindex");
+
+const llm = new OpenAI({ model: "gpt-3.5-turbo-1106", temperature: 0,  apiKey: process.env["OPENAI_API_KEY"], maxRetries: 5});
+
 
 const {Octokit} = require("@octokit/core");
 
 const {encode} = require("gpt-tokenizer");
 
-const openai = new OpenAI({
-  apiKey: process.env["OPENAI_API_KEY"]
-});
 
 const octokit = new Octokit({
     auth: process.env["GITHUB_PERSONAL_ACCESS_TOKEN"]
@@ -124,33 +124,31 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function translateTextTree(textTree, language, temp=0) {
+async function translateTextTree(textTree, language) {
          
     let text = parseTreeToMdStr(textTree);
     let messages = [];
+
+    messages = [
+        {
+            "role": "system",
+            "content": `Your are task with translating a technical documentation in ${language}. The user will provide the documentation in a markdown format. Translate it to ${language}. Only output the translated documentation in Markdown, do not add or remove content. Do not try to translate function/api endpoint name, only translate the documentation. If the documentation contain codeblocks, only translate commentaries, do not translate variablenames / function names. Try to output it in a {language} that is easy to read, do not try to translate all expressions verbatim, make it so it feel professional. If {language} usually use the enlish word for a thing, keep it in English. Notes: it's a computer doc, build mean 'compile', watch mean 'looking at file that change', ... Keep the same structure as the original documentation, and retain ALL the links / images.`,
+        },
+        {
+            "role": "user",
+            "content": `The markdown to translate (remeber do not add extra content or remove content, just translate verbatim).\n Do not expend on content, only translate the documentation. The proposed text to translate may only contain a title, in this case only translate the titel. Original in English:\n\n ${text} "\n\nTranslation in ${language}:\n\n`
+        }
+    ];
+
     try {
-         messages = [
-            {
-                "role": "system",
-                "content": `Your are task with translating a technical documentation in ${language}. The user will provide the documentation in a markdown format. Translate it to ${language}. Only output the translated documentation in Markdown, do not add or remove content. Do not try to translate function/api endpoint name, only translate the documentation. If the documentation contain codeblocks, only translate commentaries, do not translate variablenames / function names. Try to output it in a {language} that is easy to read, do not try to translate all expressions verbatim, make it so it feel professional. If {language} usually use the enlish word for a thing, keep it in English. Notes: it's a computer doc, build mean 'compile', watch mean 'looking at file that change', ... Keep the same structure as the original documentation, and retain ALL the links / images.`,
-            },
-            {
-                "role": "user",
-                "content": `The markdown to translate (remeber do not add extra content or remove content, just translate verbatim).\n Do not expend on content, only translate the documentation. The proposed text to translate may only contain a title, in this case only translate the titel. Original in English:\n\n ${text} "\n\nTranslation in ${language}:\n\n`
-            }
-        ];
-        const chatCompletion = await openai.chat.completions.create({
-            messages: messages,
-            model: 'gpt-3.5-turbo-1106',
-            temperature: temp
-        });
+        const chatCompletion = await llm.chat(messages);
 
-       // console.log(chatCompletion.choices[0].message.content)
+        // console.log(chatCompletion.choices[0].message.content)
 
 
-        let translationTree = parseMdStrToTree(chatCompletion.choices[0].message.content);
-       
-        let linkmatchesTranslated = chatCompletion.choices[0].message.content.match(/\[.*\]\(.*\)/g);
+        let translationTree = parseMdStrToTree(chatCompletion.message.content);
+        
+        let linkmatchesTranslated =chatCompletion.message.content.match(/\[.*\]\(.*\)/g);
 
         let matchesNonTranslated = text.match(/\[.*\]\(.*\)/g);
 
@@ -159,19 +157,19 @@ async function translateTextTree(textTree, language, temp=0) {
             linkmatchesTranslated != matchesNonTranslated 
             &&translationTree.length != textTree.length 
             && messages.length < 10) {
-           messages.push({
-            "role": "assistant",
-            "content" : chatCompletion.choices[0].message.content
-           });
+            messages.push({
+                "role": "assistant",
+                "content" : chatCompletion.message.content
+            });
 
-           // TODO: add more checks here
-           if (translationTree.length > textTree.length) {
+            // TODO: add more checks here
+            if (translationTree.length > textTree.length) {
                 messages.push({
                     "role": "user",
                     "content" : "The translation is seems too long, did you add too much content? redo it correctly. Only output the translation, no other contexts"
-               });
-           }
-           else if (translationTree.length < textTree.length) {
+                });
+            }
+            else if (translationTree.length < textTree.length) {
                 messages.push({
                     "role": "user",
                     "content" : "The translation is seems too short, did you forget some content? redo it correctly. Only output the translation, no other contexts"
@@ -190,21 +188,13 @@ async function translateTextTree(textTree, language, temp=0) {
                 });
             }
 
-            console.log("=======\nRejectd", JSON.stringify(messages, null, 2));
-
-
-            chatCompletion = await openai.chat.completions.create({
-                messages: messages,
-                model: 'gpt-3.5-turbo-1106',
-                temperature: temp
-            });
-            translationTree = parseMdStrToTree(chatCompletion.choices[0].message.content);
-            linkmatchesTranslated = chatCompletion.choices[0].message.content.match(/\[.*\]\(.*\)/g);   
-            
-            console.log(chatCompletion.choices[0].message.content)
+            chatCompletion = await llm.chat(messages);
+            translationTree = parseMdStrToTree(chatCompletion.message.content);
+            linkmatchesTranslated = chatCompletion.message.content.match(/\[.*\]\(.*\)/g);   
+        
+        //console.log(chatCompletion.message.content)
         }
 
-        
 
         return translationTree;
     }
@@ -213,7 +203,7 @@ async function translateTextTree(textTree, language, temp=0) {
         console.log('sleeping');
         console.log("=======\eerror on ", JSON.stringify(messages, null, 2));
         await sleep(30000)
-        return translateTextTree(textTree, language, temp);
+        return translateTextTree(textTree, language);
     }
     
 }
@@ -241,7 +231,7 @@ async function translateFile(file, language, code) {
             }
         }
 
-        let translationTree = await translateTextTree(blocks, language, 0);
+        let translationTree = await translateTextTree(blocks, language);
         
         if (translationTree.length != blocks.length) { 
             if (!file.translationError) {
@@ -380,7 +370,7 @@ async function printFiles(files, owner, repoName, repoDocDir) {
         let dir = '';
         for (let i = 0; i < dirs.length - 1; i++) {
             dir += dirs[i] + '/';
-            try {xw
+            try {
                 await fs.access(dir);
             } catch (error) {
                 await fs.mkdir(dir);
@@ -413,6 +403,7 @@ async function translateDoc(owner, repoName, repoDocDir, language, code, savePat
     }
     
     if (loadFile) {
+        console.log("Loading files from Github");
         await listDocFiles(files, owner, repoName, repoDocDir);
         await loadFiles(owner, repoName, files);
     }
@@ -427,7 +418,9 @@ async function buildDoc(owner, repoName, code, savePath, outputPath) {
     let savepath  = `${savePath}/${owner}/${repoName}.json`;
     try {
         await fs.access(savepath);
-        files = require(savepath)
+        files = require(savepath);
+        // TODO handle legacy save file
+
     } catch {
         throw new Error('No save file found, please run translate first');
     }
@@ -457,6 +450,7 @@ async function buildDoc(owner, repoName, code, savePath, outputPath) {
 // translateDoc('nodejs', 'node', 'doc', 'French', 'fr');
 //translateDoc('run-llama', 'llama_index', 'docs', 'French', 'fr')
 // translateDoc('run-llama', 'llama_index', 'docs', 'Simplified Chinese(zh_cn)', 'zh_cn')
+// translateDoc('run-llama', 'llama_index', 'docs', 'Italian', 'it', './save')
 
 module.exports = 
 {
