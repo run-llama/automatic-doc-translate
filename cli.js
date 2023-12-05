@@ -21,7 +21,7 @@ const program = commander
         (value) => value.split(',')
     )
 
-    .option('-docPath, --docPath <path_of_target_dir_on_gh_repo>',`The path of the directory to translate, defaults to "docs"`, 'docs')
+    .option('-docPath, --docPath <path_of_target_dir_on_gh_repo>',`The path of the directory to translate, oftenr is "docs"`, '')
 
 
     .option('-o, --outputPath <directory_path>',`The directory to output the translated files to, defaults to "./build"`, './build')
@@ -59,15 +59,15 @@ async function run() {
         case 'translate':
             for (let langCode of options.language) { 
                 console.log("Translating to " + langCode);
-                await translate.translateDoc(
-                    program.args[1], 
-                    program.args[2], 
-                    options.docPath, 
-                    supportedLanguages[langCode],
-                    options.language,
-                    options.savePath,
-                    loadFile
-                );
+                await translate.translateDoc({
+                    repoOwner: program.args[1],
+                    repoName: program.args[2],
+                    repoDocDir: options.docPath,
+                    language : supportedLanguages[langCode],
+                    languageCode: langCode,
+                    savePath: options.savePath,
+                    loadFile: loadFile
+                });
                 loadFile=false;
             }
     
@@ -77,15 +77,15 @@ async function run() {
 
             for (let langCode of options.language) { 
                 console.log("Updating translation in " + langCode);
-                await translate.translateDoc(
-                    program.args[1], 
-                    program.args[2], 
-                    options.docPath, 
-                    supportedLanguages[langCode],
-                    options.language,
-                    options.savePath,
-                    loadFile
-                );
+                await translate.translateDoc({
+                    repoOwner: program.args[1],
+                    repoName: program.args[2],
+                    repoDocDir: options.docPath,
+                    language : supportedLanguages[langCode],
+                    languageCode: langCode,
+                    savePath: options.savePath,
+                    loadFile: loadFile
+                });
                 loadFile=false;
             }
             break;
@@ -109,13 +109,15 @@ async function run() {
                 }
 
                 console.log("Building translation Md " + langCode + " to " + options.outputPath); 
-                translate.buildDoc(
-                    program.args[1],
-                    program.args[2],
-                    langCode,
-                    options.savePath,
-                    outPath,
-                    prefixToRemove
+               
+                translate.buildDoc({
+                        repoOwner: program.args[1],
+                        repoName: program.args[2],
+                        languageCode: langCode,
+                        savePath: options.savePath,
+                        outputPath: outPath,
+                        prefixToRemove: prefixToRemove
+                    }
                 );
             }
             break;
@@ -125,15 +127,15 @@ async function run() {
                 loadFile = true;
                 for (let langCode of options.language) { 
                     console.log("Translating to " + langCode);
-                    await translate.translateDoc(
-                        program.args[1], 
-                        program.args[2], 
-                        options.docPath, 
-                        supportedLanguages[langCode],
-                        options.language,
-                        options.savePath,
-                        loadFile
-                    );
+                    await translate.translateDoc({
+                        repoOwner: program.args[1],
+                        repoName: program.args[2],
+                        repoDocDir: options.docPath,
+                        language : supportedLanguages[langCode],
+                        languageCode: langCode,
+                        savePath: options.savePath,
+                        loadFile: loadFile
+                    });
                     loadFile=false;
                 }
 
@@ -152,14 +154,17 @@ async function run() {
                     }
     
                     console.log("Building translation Md " + langCode + " to " + options.outputPath); 
-                    translate.buildDoc(
-                        program.args[1],
-                        program.args[2],
-                        langCode,
-                        options.savePath,
-                        outPath,
-                        prefixToRemove
-                    );
+                    
+
+    
+                    translate.buildDoc({
+                            repoOwner: program.args[1],
+                            repoName: program.args[2],
+                            languageCode: langCode,
+                            savePath: options.savePath,
+                            outputPath: outPath,
+                            prefixToRemove: prefixToRemove
+                        });
                 }
                 break;
      }

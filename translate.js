@@ -151,7 +151,7 @@ Guidelines:
 
 Additional Notes:
 - it's a computer doc, build mean 'compile', watch mean 'looking at file that change',
-- Keep the same structure as the original documentation, and retain ALL the links / images.,
+- Keep the same structure as the original documentation, and retain ALL the links / images.
 `,
             },
             {
@@ -231,6 +231,8 @@ Additional Notes:
 
 
 async function translateFile(file, language, code) {
+    debugger;
+    console.log("translating file:", file.name, code);
     if (!file.doc) {
         file.doc = parseMdStrToTree(file.raw);
     }
@@ -354,11 +356,10 @@ async function correctLinkInFile(file, languageCode, docDir) {
 
 async function buildOutputMd(files, languageCode, targetDir, prefixToRemove) { 
 
-    console.log('Prefix to remove', prefixToRemove)
-    
     for (let file of files) {
         // check if file is translated in target language
         if (!file.doc || file.doc[0][`content_${languageCode}`] === undefined) { 
+            console.log('failed to find translation', file.path);
             continue
         }
 
@@ -404,14 +405,24 @@ async function printFiles(files, owner, repoName, repoDocDir) {
     }
 }
 
-async function translateDoc(owner, repoName, repoDocDir, language, code, savePath, loadFile=true) {
-    
+async function translateDoc(options) {
+
+    const repoOwner = options.repoOwner;
+    const repoName = options.repoName;
+    const repoDocDir = options.repoDocDir;
+    const language = options.language;
+    const languageCode = options.languageCode;
+    const savePath = options.savePath;
+    const loadFile = options.loadFile || (options.loadFile === undefined) ? true : false; // default to true
+
+    console.log(options);
     // const files = await listDocFiles(owner, repoName, repoDocDir);
     let files = [];
-    let savepath  = `${savePath}/${owner}/${repoName}.json`;
+    let savepath  = `${savePath}/${repoOwner}/${repoName}.json`;
     try {
         await fs.access(savepath);
-        files = require(savepath)
+        console.log("Loading files from save file successfully")
+        files = require(savepath);
     } catch {
         // create the save oath
         let dirs = savepath.split('/');
@@ -428,27 +439,34 @@ async function translateDoc(owner, repoName, repoDocDir, language, code, savePat
     
     if (loadFile) {
         console.log("Loading files from Github");
-        await listDocFiles(files, owner, repoName, repoDocDir);
-        await loadFiles(owner, repoName, files);
+        await listDocFiles(files, repoOwner, repoName, repoDocDir);
+        await loadFiles(repoOwner, repoName, files);
     }
 
-    await translateFiles(files, language, code, savepath);
+    await translateFiles(files, language, languageCode, savepath);
 }
 
-async function buildDoc(owner, repoName, code, savePath, outputPath, prefixToRemove) {
+
+async function buildDoc(options) {
+    const repoOwner = options.repoOwner;
+    const repoName = options.repoName;
+    const languageCode = options.languageCode;
+    const savePath = options.savePath;
+    const outputPath = options.outputPath;
+    const prefixToRemove = options.prefixToRemove;
+
+    
     
     // const files = await listDocFiles(owner, repoName, repoDocDir);
     let files = [];
-    let savepath  = `${savePath}/${owner}/${repoName}.json`;
+    let savepath  = `${savePath}/${repoOwner}/${repoName}.json`;
     try {
         await fs.access(savepath);
         files = require(savepath);
-        // TODO handle legacy save file
-
+        console.log("Loading files from save file successfully")        
     } catch {
         throw new Error('No save file found, please run translate first');
     }
-
 
     let outPath  = outputPath;
     try {
@@ -467,18 +485,8 @@ async function buildDoc(owner, repoName, code, savePath, outputPath, prefixToRem
         }
     }
     
-    await buildOutputMd(files, code, outPath, prefixToRemove);
+    await buildOutputMd(files, languageCode, outputPath, prefixToRemove);
 }
-
-
-// translateDoc('nodejs', 'node', 'doc', 'French', 'fr');
-//translateDoc('run-llama', 'llama_index', 'docs', 'French', 'fr')
-
-// translateDoc('run-llama', 'LlamaIndexTS', 'apps/docs/docs', 'Simplified Chinese(zh-Hans)', 'zh-Hans', './save')
-
-// translateDoc('run-llama', 'llama_index', 'docs', 'Simplified Chinese(zh_cn)', 'zh_cn')
-// translateDoc('run-llama', 'llama_index', 'docs', 'Italian', 'it', './save')
-
 
 module.exports = 
 {
