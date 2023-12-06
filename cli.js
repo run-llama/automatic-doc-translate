@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
 const commander = require('commander');
-const supportedLanguages = require('./supportedLanguages.json');
+
+const supportedLanguages = require('./src/supportedLanguages.json');
 
 const { version } = require('./package.json');
 
@@ -25,7 +26,7 @@ const program = commander
 
 
     .option('-o, --outputPath <directory_path>',`The directory to output the translated files to, defaults to "./build"`, './build')
-    .option('-s, --savePath <directory_path>',`The directory to read the source files from, defaults to "./save"`, `./save`) 
+    .option('-s, --savePath <directory_path>',`The directory to read the source files from, defaults to "./save"`, `${__dirname}/save`) 
 
     .option('-gt, --githubtoken <token>', 'The GitHub token PAT to use for authentication, default to the value of the GITHUB_PERSONAL_ACCESS_TOKEN environment variable')
     .option('-ok, --openaikey <key>', 'The OpenAI key to use for authentication, default to the value of the OPENAI_API_KEY environment variable')
@@ -53,7 +54,8 @@ if (options.language.indexOf('all') !== -1) {
 }
 
 async function run() {
-    const translate = require('./translate');
+    const translate = require('./src/translate');
+    const build = require('./src/build');
 
     let loadFile = true;
 
@@ -62,7 +64,7 @@ async function run() {
         case 'translate':
             for (let langCode of options.language) { 
                 console.log("Translating to " + langCode);
-                await translate.translateDoc({
+                await translate({
                     repoOwner: program.args[1],
                     repoName: program.args[2],
                     repoDocDir: options.docPath,
@@ -80,7 +82,7 @@ async function run() {
 
             for (let langCode of options.language) { 
                 console.log("Updating translation in " + langCode);
-                await translate.translateDoc({
+                await translate({
                     repoOwner: program.args[1],
                     repoName: program.args[2],
                     repoDocDir: options.docPath,
@@ -113,7 +115,7 @@ async function run() {
 
                 console.log("Building translation Md " + langCode + " to " + options.outputPath); 
                
-                translate.buildDoc({
+                build({
                         repoOwner: program.args[1],
                         repoName: program.args[2],
                         languageCode: langCode,
@@ -124,52 +126,52 @@ async function run() {
                 );
             }
             break;
-            case 'run':
-                // TODO: clean up this code
-                // both translate and build
-                loadFile = true;
-                for (let langCode of options.language) { 
-                    console.log("Translating to " + langCode);
-                    await translate.translateDoc({
+        case 'run':
+            // TODO: clean up this code
+            // both translate and build
+            loadFile = true;
+            for (let langCode of options.language) { 
+                console.log("Translating to " + langCode);
+                await translate({
+                    repoOwner: program.args[1],
+                    repoName: program.args[2],
+                    repoDocDir: options.docPath,
+                    language : supportedLanguages[langCode],
+                    languageCode: langCode,
+                    savePath: options.savePath,
+                    loadFile: loadFile
+                });
+                loadFile = false;
+            }
+
+            for (let langCode of options.language) {
+                let outPath = ''
+                let prefixToRemove = ''
+
+                if (options.mode == 'docusaurus') {
+                    console.log('Using docusaurus mode')
+                    outPath = options.outputPath + `/i18n/${langCode}/docusaurus-plugin-content-docs/current/`
+                    prefixToRemove = options.docPath
+                } else {
+                    console.log('Using manual mode')
+                    outPath = options.outputPath + `/${langCode}`
+                    prefixToRemove = ''
+                }
+
+                console.log("Building translation Md " + langCode + " to " + options.outputPath); 
+                
+
+
+                build({
                         repoOwner: program.args[1],
                         repoName: program.args[2],
-                        repoDocDir: options.docPath,
-                        language : supportedLanguages[langCode],
                         languageCode: langCode,
                         savePath: options.savePath,
-                        loadFile: loadFile
+                        outputPath: outPath,
+                        prefixToRemove: prefixToRemove
                     });
-                    loadFile=false;
-                }
-
-                for (let langCode of options.language) {
-                    let outPath = ''
-                    let prefixToRemove = ''
-    
-                    if (options.mode == 'docusaurus') {
-                        console.log('Using docusaurus mode')
-                        outPath = options.outputPath + `/i18n/${langCode}/docusaurus-plugin-content-docs/current/`
-                        prefixToRemove = options.docPath
-                    } else {
-                        console.log('Using manual mode')
-                        outPath = options.outputPath + `/${langCode}`
-                        prefixToRemove = ''
-                    }
-    
-                    console.log("Building translation Md " + langCode + " to " + options.outputPath); 
-                    
-
-    
-                    translate.buildDoc({
-                            repoOwner: program.args[1],
-                            repoName: program.args[2],
-                            languageCode: langCode,
-                            savePath: options.savePath,
-                            outputPath: outPath,
-                            prefixToRemove: prefixToRemove
-                        });
-                }
-                break;
+            }
+            break;
      }
 }
 
