@@ -13,7 +13,8 @@ const {encode} = require("gpt-tokenizer");
 const octokit = new Octokit({
     auth: process.env["GITHUB_PERSONAL_ACCESS_TOKEN"]
 })
-  
+
+let suportedLanguages = require('./supportedLanguages.json');
 
 async function getLastFileVersion(owner, repoName, path) {
     let docFiles = [];
@@ -31,15 +32,33 @@ async function getLastFileVersion(owner, repoName, path) {
             docFiles = docFiles.concat(files);
         }
         if (file.type === 'file' && (file.name.endsWith('.md') || file.name.endsWith('.mdx'))) {
+            // check if file is a translation
+            if (file.name.indexOf('/i18n/') !== -1) {
+                continue;
+            }
+            // check if file path contain one of supportedLanguages.keys()
+            let isLikelyTranslation = false;
+
+            for (let langCode of Object.keys(suportedLanguages)) {
+                if (file.path.indexOf(`/${langCode}/`) !== -1) {
+                    isLikelyTranslation = true;
+                    break;
+                }
+            }
+            if (isLikelyTranslation) {
+                continue;
+            }
             docFiles.push(file);
         }
     }
+   
     return docFiles;
 }
 
 async function listDocFiles(files, owner, repoName, path) {
    let newFiles = await getLastFileVersion(owner, repoName, path);
-
+   console.log(newFiles);
+   
    for (let file of newFiles) { 
         let fileHandledFlag = false;
         for (let [index, oldFile] of files.entries()) {
@@ -127,6 +146,30 @@ function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+// GPT have a tendency to loop on a word / token, here we match the last word of the string with the last word of the string - 1, and return the number of time it match
+function detectRepeatedPattern(str) {
+    let pattern = '';
+    for (let i = str.length - 1; i >= 0; i--) {
+        pattern = str[i] + pattern;
+        const patternRepeated = pattern + pattern + pattern + pattern;
+        if (str.endsWith(patternRepeated)) {
+            return pattern;
+        }
+    }
+    return '';
+}
+
+function removeRepeatedPattern(str) {
+    const pattern = detectRepeatedPattern(str);
+    if (pattern !== '') {
+        while (str.endsWith(pattern)) {
+            str = str.substring(0, str.length - pattern.length);
+        }
+        return str + pattern;
+    }
+
+    return str;
+}
 async function translateTextTree(textTree, language) {
          
     let text = parseTreeToMdStr(textTree);
@@ -161,13 +204,13 @@ Additional Notes:
         ];
 
 
-        const chatCompletion = await llm.chat(messages);
+        let chatCompletion = await llm.chat(messages);
 
 
         // console.log(chatCompletion.choices[0].message.content)
 
 
-        let translationTree = parseMdStrToTree(chatCompletion.message.content);
+        let translationTree = parseMdStrToTree(removeRepeatedPattern(chatCompletion.message.content));
         
         let linkmatchesTranslated =chatCompletion.message.content.match(/\[.*\]\(.*\)/g);
 
@@ -176,11 +219,11 @@ Additional Notes:
         // Not a good translation, try again
         while (
             linkmatchesTranslated != matchesNonTranslated 
-            &&translationTree.length != textTree.length 
-            && messages.length < 10) {
+            && translationTree.length != textTree.length 
+            && messages.length < 5) {
             messages.push({
                 "role": "assistant",
-                "content" : chatCompletion.message.content
+                "content" : removeRepeatedPattern(chatCompletion.message.content)
             });
 
             // TODO: add more checks here
@@ -209,8 +252,9 @@ Additional Notes:
                 });
             }
 
+            console.log(messages);
             chatCompletion = await llm.chat(messages);
-            translationTree = parseMdStrToTree(chatCompletion.message.content);
+            translationTree = parseMdStrToTree(removeRepeatedPattern(chatCompletion.message.content));
             linkmatchesTranslated = chatCompletion.message.content.match(/\[.*\]\(.*\)/g);   
         
         //console.log(chatCompletion.message.content)
@@ -230,9 +274,8 @@ Additional Notes:
 }
 
 
-async function translateFile(file, language, code) {
-    debugger;
-    console.log("translating file:", file.name, code);
+async function translateAFile(file, language, code) {
+    console.log(`translating file: ${file.name} to ${suportedLanguages[code]} (${code})`);
     if (!file.doc) {
         file.doc = parseMdStrToTree(file.raw);
     }
@@ -286,17 +329,20 @@ async function translateFiles(files, language, code, savepath) {
     for (let file of files) {
         started_jobs++;
         let fn = async function() {
-            console.log("translating:", file.name);
-            await translateFile(file, language, code);
+            await translateAFile(file, language, code);
             await fs.writeFile(savepath, JSON.stringify(files, null, 2), 'utf8');
             finished_jobs++;
         }
         fn();
     }
+    let previously_display_finished_job = 0;
     // wait that all jobs finished
     while (finished_jobs < started_jobs) {
-        await sleep(1000);
-        console.log(finished_jobs + '/' + started_jobs);
+        await sleep(100);
+        if (previously_display_finished_job != finished_jobs) {
+            console.log(finished_jobs + '/' + started_jobs);
+            previously_display_finished_job = finished_jobs;
+        }
     }
 }
 
@@ -415,7 +461,6 @@ async function translateDoc(options) {
     const savePath = options.savePath;
     const loadFile = options.loadFile || (options.loadFile === undefined) ? true : false; // default to true
 
-    console.log(options);
     // const files = await listDocFiles(owner, repoName, repoDocDir);
     let files = [];
     let savepath  = `${savePath}/${repoOwner}/${repoName}.json`;

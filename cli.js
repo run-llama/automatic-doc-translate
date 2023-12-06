@@ -16,12 +16,12 @@ const program = commander
     .argument('<command>', 'The operation to operate, either "translate", "update", "serve" or "build"')
     .argument('<repo_owner>', 'The owner of the repository to operate on (e.g. "microsoft")')
     .argument('<repo_name>', 'The name of the repository to operate on (e.g. "vscode")')
-    .option('-l, --language <languages>',`The languages to translate to, separated by commas, supported languages (see supportedLanguages.json): 
+    .option('-l, --language <languages>',`The languages to translate to, separated by comma. Use 'all' to translate in all languages (warning it's costly)! supported languages (see supportedLanguages.json): 
     ${Object.keys(supportedLanguages).join(', ')}`,
         (value) => value.split(',')
     )
 
-    .option('-docPath, --docPath <path_of_target_dir_on_gh_repo>',`The path of the directory to translate, oftenr is "docs"`, '')
+    .option('-d, --docPath <path_of_target_dir_on_gh_repo>',`The path of the directory to translate, oftenr is "docs"`, '')
 
 
     .option('-o, --outputPath <directory_path>',`The directory to output the translated files to, defaults to "./build"`, './build')
@@ -48,6 +48,9 @@ if (options.openaikey) {
     process.env.OPENAI_API_KEY = options.openaikey;
 }
 
+if (options.language.indexOf('all') !== -1) { 
+    options.language = Object.keys(supportedLanguages);
+}
 
 async function run() {
     const translate = require('./translate');
