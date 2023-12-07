@@ -28,6 +28,25 @@ Access the help page with the following command:
 
 ### Translating Documentation
 
+Autotranslatedoc  take 3 arguments and many options
+
+```
+    autotranslatedoc <command> <repo_org> <repo_name> (options)
+```
+
+- ```command``` can be either: ```translate``` (to translate), ```update``` (to update a translation), ```build``` (to build a translation)
+- ```repo_org``` is the org of the target repository on GitHub
+- ```repo_name``` is the name of the target repository on GitHub
+
+The main options available are:
+
+- ```--language <lang_1>(, <lang_2>)*``` (or ```-l```) to select the language you want to translate to.
+- ```--docPath </url/path>``` (or ```-d```) to limit translation to files in a specific path.
+- ```--savePath <./localPath>``` (or ```-s```) to select the directory where the save file will be saved (default to ```./save```).
+- ```--outputPath <./localPath>``` (or ```-o```) when using ```build```, to specified where the translated doc files will be output (default to ```./build```)
+
+
+
 To translate the documentation of a target repository into French and Spanish, use:
 ```
     autotranslatedoc translate run-llama llama_index -l fr,es
