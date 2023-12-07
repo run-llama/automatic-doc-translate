@@ -65,16 +65,32 @@ async function run() {
         case 'translate':
             for (let langCode of options.language) { 
                 console.log("Translating to " + langCode);
-                await translate({
-                    repoOwner: program.args[1],
-                    repoName: program.args[2],
-                    repoDocDir: options.docPath,
-                    language : supportedLanguages[langCode],
-                    languageCode: langCode,
-                    savePath: options.savePath,
-                    loadFile: loadFile,
-                    translateMode: options.mode
-                });
+                if (options.mode == 'readme' && !loadFile) {
+                    // from second translation parrallelize
+                    translate({
+                        repoOwner: program.args[1],
+                        repoName: program.args[2],
+                        repoDocDir: options.docPath,
+                        language : supportedLanguages[langCode],
+                        languageCode: langCode,
+                        savePath: options.savePath,
+                        loadFile: loadFile,
+                        translateMode: options.mode
+                    });
+                }
+                else {
+                    await translate({
+                        repoOwner: program.args[1],
+                        repoName: program.args[2],
+                        repoDocDir: options.docPath,
+                        language : supportedLanguages[langCode],
+                        languageCode: langCode,
+                        savePath: options.savePath,
+                        loadFile: loadFile,
+                        translateMode: options.mode
+                    });
+                }
+              
                 loadFile=false;
             }
     

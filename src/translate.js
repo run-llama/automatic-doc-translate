@@ -160,7 +160,7 @@ Additional Notes:
 
     }
     catch (error) {
-        console.log(error);
+        console.log("Error", error);
     }
     return translationTree;
 }
@@ -237,7 +237,6 @@ async function translateFiles(files, language, code, savepath, translateMode) {
     let finished_jobs = 0;
     let started_jobs = 0;
     for (let file of files) {
-        console.log(translateMode);
         if (translateMode == 'readme' && file.path !== 'README.md') { 
             continue;
         }

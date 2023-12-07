@@ -1,0 +1,97 @@
+
+# OpenAI स्वचालित दस्तावेज़ीकरण अनुवाद
+
+[EN](./README.md)| [zh-Hans](/i18n/README_zh-Hans.md) | [es](/i18n/README_es.md) | [ru](/i18n/README_ru.md) | [de](/i18n/README_de.md) | [fr](/i18n/README_fr.md) | [ja](/i18n/README_ja.md) | [ko](/i18n/README_ko.md) | [pt](/i18n/README_pt.md) | [it](/i18n/README_it.md) | [ar](/i18n/README_ar.md) | [tr](/i18n/README_tr.md) | [pl](/i18n/README_pl.md) | [nl](/i18n/README_nl.md) | [vi](/i18n/README_vi.md) | [th](/i18n/README_th.md) | [fa](/i18n/README_fa.md) | [ro](/i18n/README_ro.md) | [sv](/i18n/README_sv.md) | [hu](/i18n/README_hu.md) | [cs](/i18n/README_cs.md) | [el](/i18n/README_el.md) | [da](/i18n/README_da.md) | [fi](/i18n/README_fi.md) | [he](/i18n/README_he.md) | [no](/i18n/README_no.md) | [zh_tw](/i18n/README_zh_tw.md) | [in](/i18n/README_in.md) | [sl](/i18n/README_sl.md) | [se](/i18n/README_se.md) | [sk](/i18n/README_sk.md) | [uk](/i18n/README_uk.md) | [bg](/i18n/README_bg.md) | [hr](/i18n/README_hr.md) | [lt](/i18n/README_lt.md) | [lv](/i18n/README_lv.md) | [et](/i18n/README_et.md) | [cat](/i18n/README_cat.md) 
+
+```इस दस्तावेज़ का अनुवाद स्वचालित रूप से किया गया है और इसमें त्रुटियाँ हो सकती हैं। परिवर्तन सुझाने के लिए पुल रिक्वेस्ट खोलने में संकोच न करें।```
+
+
+यह उपकरण OPEN AI GPT 3.5 / 4 की क्षमताओं का उपयोग करता है ताकि एक GitHub रिपॉजिटरी के भीतर स्वचालित रूप से दस्तावेज़ीकरण फ़ाइलें (अर्थात्, .md/.mdx फ़ाइलें) का अनुवाद किया जा सके।
+
+*** अस्वीकरण: यह उपकरण वर्तमान में विकास के अधीन है ***
+
+
+## स्थापना
+
+यह उपकरण NPM के माध्यम से स्थापित किया जा सकता है:
+
+
+```
+    npm install -g autotranslatedoc
+```
+
+`GITHUB_PERSONAL_ACCESS_TOKEN` और `OPENAI_API_KEY` जैसे पर्यावरण चरों को सेट करने का सुनिश्चित करें। वैकल्पिक रूप से, इन टोकन को पैरामीटर के रूप में पास किया जा सकता है। `GITHUB_PERSONAL_ACCESS_TOKEN` प्राप्त करने के लिए [GitHub दस्तावेज़ीकरण](https://docs.github.com/en/github/authenticating-to-github/creating-a-personal-access-token) का संदर्भ दें।
+
+
+"
+## उपयोग
+
+
+### सहायता पृष्ठ
+निम्नलिखित कमांड के साथ सहायता पृष्ठ तक पहुंचें:
+```
+ autotranslatedoc -h
+```
+### दस्तावेज़ीकरण का अनुवाद करना
+
+एक लक्षित रिपॉजिटरी के दस्तावेज़ीकरण को फ़्रेंच और स्पेनिश में अनुवाद करने के लिए, निम्न का उपयोग करें:
+```
+    autotranslatedoc translate run-llama llama_index -l fr,es
+```
+
+
+यह कमांड निर्दिष्ट आउटपुट निर्देशिका (डिफ़ॉल्ट है `./save`) के `run-lama` निर्देशिका में `llama_index.json` फ़ाइल बनाता है।
+```
+    ls ./save
+        run-llama
+            llama_index.json 
+```
+सेव फ़ाइल में सभी अनुवाद संग्रहीत होते हैं और इसका उपयोग लक्षित प्रारूप (वर्तमान में केवल .md) में दस्तावेज़ीकरण उत्पन्न करने के लिए किया जा सकता है।
+
+अनुवादित दस्तावेज़ीकरण बनाने के लिए, निम्न का उपयोग करें:
+
+```
+    autotranslatedoc build run-llama llama_index -l fr,es
+```
+
+
+यह कमांड निर्दिष्ट निर्माण पथ (डिफ़ॉल्ट है `./build`) में `fr` और `es` निर्देशिकाएँ उत्पन्न करता है जिनमें अनुवादित दस्तावेज़ीकरण फ़ाइलें होती हैं।
+
+मूल फ़ाइलों में परिवर्तनों के आधार पर अनुवादित दस्तावेज़ीकरण को अपडेट करने के लिए, निम्न का उपयोग करें:
+
+```
+    autotranslatedoc update run-llama llama_index -l fr,es
+```
+
+
+एक सर्वर के माध्यम से दस्तावेज़ीकरण की समीक्षा करने के लिए (प्रायोगिक सुविधा), निम्न का उपयोग करें:
+```
+    autotranslatedoc serve run-llama llama_index
+```
+### डोक्यूसॉरस दस्तावेज़ीकरण का अनुवाद करना
+
+डोक्यूसॉरस में होस्ट की जाने वाली दस्तावेज़ीकरण के लिए, निम्न का उपयोग करें:
+
+```
+    autotranslatedoc translate run-llama LlamaIndexTS --docPath /apps/docs/docs -l fr,es -m docusaurus
+    autotranslatedoc build run-llama LlamaIndexTS --docPath /apps/docs/docs -l fr,es -m docusaurus
+```
+### केवल README.md का अनुवाद करना
+
+केवल README फ़ाइल का अनुवाद करने के लिए, `readme` मोड का उपयोग करें:
+
+```
+    autotranslatedoc translate run-llama LlamaIndexTS -l fr,es -m readme
+    autotranslatedoc build run-llama LlamaIndexTS  -l fr,es -m readme
+```
+### सभी समर्थित भाषाओं में अनुवाद करना
+
+सभी समर्थित भाषाओं में अनुवाद करने के लिए, `-l all` विकल्प का उपयोग करें:
+
+```
+    autotranslatedoc translate run-llama LlamaIndexTS -l all -m readme
+    autotranslatedoc build run-llama LlamaIndexTS  -l all -m readme
+```
+## ज्ञात समस्याएँ
+
+वर्तमान में, `-all` के साथ अनुवाद केवल अंग्रेजी से अन्य सभी भाषाओं के लिए समर्थित है।

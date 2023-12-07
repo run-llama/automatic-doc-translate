@@ -76,15 +76,17 @@ async function correctLinkInFile(file, languageCode, docDir) {
 async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, target, language) { 
 
     for (let file of files) {
+        if (target == 'readme' && file.path !== 'README.md') { 
+            continue;
+        }
+        
         // check if file is translated in target language
         if (!file.doc || file.doc[0][`content_${languageCode}`] === undefined) { 
             console.log('failed to find translation', file.path);
             continue
         }
 
-        if (target == 'readme' && file.path !== 'README.md') { 
-            continue;
-        }
+
 
         await correctLinkInFile(file, languageCode);
 
