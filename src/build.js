@@ -1,7 +1,10 @@
 const fs = require('fs/promises');
+const existsSync = require('fs').existsSync;
 const mdUtils = require('./mdUtils');
 
+const supportedLanguages = require('./supportedLanguages.json');
 const translationDisclaimer = require('./supportedLanguagesWarning.json');
+const e = require('express');
 
 /**
 * Corrects the links in a given file for a specific language.
@@ -50,9 +53,6 @@ async function correctLinkInFile(file, languageCode, docDir) {
                 urlText = urlText.substring(1, urlText.length - 1);
                 urlText = `[${urlText}]`;
 
-               // console.log('Replace by', urlText + newUrl, 'match', translatedMatch);
-
-               //  console.log( block[`content_${languageCode}`])
                 block[`content_${languageCode}`][0] = block[`content_${languageCode}`][0].replace(translatedMatch, urlText + newUrl);
 
 
@@ -73,7 +73,7 @@ async function correctLinkInFile(file, languageCode, docDir) {
  *
  * @throws {Error} If a file is not translated in the target language.
  */
-async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, target) { 
+async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, target, language) { 
 
     for (let file of files) {
         // check if file is translated in target language
@@ -82,20 +82,26 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, tar
             continue
         }
 
+        if (target == 'readme' && file.path !== 'README.md') { 
+            continue;
+        }
+
         await correctLinkInFile(file, languageCode);
 
         let translatedMd = mdUtils.parseTreeToMdStr(file.doc, languageCode);  
         let filePath = file.path.replace(prefixToRemove, '');
         let path = `${targetDir}/${filePath}`;
 
+        if (target == 'readme') { 
+            path = `${targetDir}/README_${languageCode}.md`;
+        }
+
         // check if every directory in path exists and create if not
         let dirs = path.split('/');
         let dir = '';
         for (let i = 0; i < dirs.length - 1; i++) {
             dir += dirs[i] + '/';
-            try {
-                await fs.access(dir);
-            } catch (error) {
+            if (!existsSync(dir)) {
                 await fs.mkdir(dir);
             }
         }
@@ -108,7 +114,19 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, tar
                 firstHeadingFound = true;
             }
             if (firstHeadingFound) {
-                lines[index] = line + '\n\n' + "```" + translationDisclaimer[languageCode] + "```\n";
+                if (target === 'docusaurus') {
+                    lines[index] = line + `
+    :::note
+        ${translationDisclaimer[languageCode]}
+    :::         
+    `;
+                }
+                else if (target === 'readme') { 
+                    lines[index] = line +  getLanguageMenu(languageCode, language) + '\n\n' + "```" + translationDisclaimer[languageCode] + "```\n";
+                }
+                else {
+                    lines[index] = line + '\n\n' + "```" + translationDisclaimer[languageCode] + "```\n";
+                }
                 break;
             }
         }
@@ -119,7 +137,9 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, tar
     ${translationDisclaimer[languageCode]}
 :::         
 `);
-
+            }
+            else if (target === 'readme') { 
+                lines.unshift(getLanguageMenu(languageCode, language) + '\n\n' + "```" + translationDisclaimer[languageCode] + "```\n");
             }
             else {
                 lines.unshift("```" + translationDisclaimer[languageCode] + "```\n");
@@ -127,8 +147,21 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, tar
             }
         }
         translatedMd = lines.join('\n');
+
         await fs.writeFile(path, translatedMd, 'utf8');
     }
+}
+
+function getLanguageMenu(languageCode, language) { 
+    let md = "\n\n[English](./README.md)";
+
+    for (let lang of language) {
+        if (lang != languageCode) {
+            md += `| [${supportedLanguages[lang]}](./README_${lang}.md) `;
+        
+        }
+    }
+    return md;
 }
 
 /**
@@ -154,7 +187,8 @@ async function build(options) {
     const savePath = options.savePath;
     const outputPath = options.outputPath;
     const prefixToRemove = options.prefixToRemove;
-    const target = options.target;
+    const buildMode = options.buildMode;
+    const language = options.language;
 
     let files = [];
     let savepath  = `${savePath}/${repoOwner}/${repoName}.json`;
@@ -174,15 +208,13 @@ async function build(options) {
         let dir = '';
         for (let i = 0; i < dirs.length - 1; i++) {
             dir += dirs[i] + '/';
-            try {
-                await fs.access(dir);
-            } catch (error) {
+            if (!existsSync(dir)) {
                 await fs.mkdir(dir);
             }
         }
     }
     
-    await buildOutputMd(files, languageCode, outputPath, prefixToRemove, target);
+    await buildOutputMd(files, languageCode, outputPath, prefixToRemove, buildMode, language);
 }
 
 module.exports = build

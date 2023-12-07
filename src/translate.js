@@ -233,10 +233,14 @@ async function translateAFile(file, language, code) {
  *
  * @returns {Promise<void>} A promise that resolves when all files have been translated. The translated content of each file is stored in its `raw` property.
  */
-async function translateFiles(files, language, code, savepath) {
+async function translateFiles(files, language, code, savepath, translateMode) {
     let finished_jobs = 0;
     let started_jobs = 0;
     for (let file of files) {
+        console.log(translateMode);
+        if (translateMode == 'readme' && file.path !== 'README.md') { 
+            continue;
+        }
         started_jobs++;
         let fn = async function() {
             await translateAFile(file, language, code);
@@ -279,6 +283,7 @@ async function translate(options) {
     const languageCode = options.languageCode;
     const savePath = options.savePath;
     const loadFile = options.loadFile || (options.loadFile === undefined) ? true : false; // default to true
+    const translateMode = options.translateMode;
 
     let files = [];
     let savepath  = `${savePath}/${repoOwner}/${repoName}.json`;
@@ -302,11 +307,11 @@ async function translate(options) {
     
     if (loadFile) {
         console.log("Loading files from Github");
-        await githubUtils.listDocumentationFiles(files, repoOwner, repoName, repoDocDir, ['.md', '.mdx']);
+    await githubUtils.listDocumentationFiles(files, repoOwner, repoName, repoDocDir, ['.md', '.mdx']);
         await githubUtils.downloadDocumentationFiles(repoOwner, repoName, files);
     }
 
-    await translateFiles(files, language, languageCode, savepath);
+    await translateFiles(files, language, languageCode, savepath, translateMode);
 }
 
 

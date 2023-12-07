@@ -30,7 +30,7 @@ const program = commander
 
     .option('-gt, --githubtoken <token>', 'The GitHub token PAT to use for authentication, default to the value of the GITHUB_PERSONAL_ACCESS_TOKEN environment variable')
     .option('-ok, --openaikey <key>', 'The OpenAI key to use for authentication, default to the value of the OPENAI_API_KEY environment variable')
-    .option('-m, --mode <mode>', 'The documentation mode to use, either "manual" or "docusaurus", defaults to "docusaurus"', 'manual')
+    .option('-m, --mode <mode>', 'The documentation mode to use, either "manual", "readme" or "docusaurus", defaults to "manual"', 'manual')
 
     .action((command) => {
         if (!validCommands.includes(command)) {
@@ -59,6 +59,7 @@ async function run() {
 
     let loadFile = true;
 
+
     switch (program.processedArgs[0]) {
 
         case 'translate':
@@ -71,7 +72,8 @@ async function run() {
                     language : supportedLanguages[langCode],
                     languageCode: langCode,
                     savePath: options.savePath,
-                    loadFile: loadFile
+                    loadFile: loadFile,
+                    translateMode: options.mode
                 });
                 loadFile=false;
             }
@@ -89,7 +91,9 @@ async function run() {
                     language : supportedLanguages[langCode],
                     languageCode: langCode,
                     savePath: options.savePath,
-                    loadFile: loadFile
+                    loadFile: loadFile,
+                    translateMode: options.mode
+
                 });
                 loadFile=false;
             }
@@ -107,7 +111,9 @@ async function run() {
                     console.log('Using docusaurus mode')
                     outPath = options.outputPath + `/i18n/${langCode}/docusaurus-plugin-content-docs/current/`
                     prefixToRemove = options.docPath
-                } else {
+                } else if (options.mode == 'readme') {
+                    outPath = options.outputPath;
+                }else {
                     console.log('Using manual mode')
                     outPath = options.outputPath + `/${langCode}`
                     prefixToRemove = ''
@@ -115,14 +121,15 @@ async function run() {
 
                 console.log("Building translation Md " + langCode + " to " + options.outputPath); 
                
-                build({
+                await build({
                         repoOwner: program.args[1],
                         repoName: program.args[2],
                         languageCode: langCode,
                         savePath: options.savePath,
                         outputPath: outPath,
                         prefixToRemove: prefixToRemove,
-                        target: options.mode
+                        buildMode: options.mode,
+                        language: options.language
                     }
                 );
             }
@@ -140,7 +147,8 @@ async function run() {
                     language : supportedLanguages[langCode],
                     languageCode: langCode,
                     savePath: options.savePath,
-                    loadFile: loadFile
+                    loadFile: loadFile,
+                    translateMode: options.mode
                 });
                 loadFile = false;
             }
@@ -163,13 +171,15 @@ async function run() {
                 
 
 
-                build({
+                await build({
                         repoOwner: program.args[1],
                         repoName: program.args[2],
                         languageCode: langCode,
                         savePath: options.savePath,
                         outputPath: outPath,
-                        prefixToRemove: prefixToRemove
+                        prefixToRemove: prefixToRemove,
+                        buildMode: options.mode,
+                        language: options.language
                     });
             }
             break;
