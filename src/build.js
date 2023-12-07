@@ -153,12 +153,11 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, tar
 }
 
 function getLanguageMenu(languageCode, language) { 
-    let md = "\n\n[English](./README.md)";
+    let md = "\n\n[EN](./README.md)";
 
     for (let lang of language) {
         if (lang != languageCode) {
-            md += `| [${supportedLanguages[lang]}](./README_${lang}.md) `;
-        
+            md += `| [${lang}](/i18n/README_${lang}.md) `;
         }
     }
     return md;
