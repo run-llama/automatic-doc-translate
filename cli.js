@@ -26,7 +26,7 @@ const program = commander
 
 
     .option('-o, --outputPath <directory_path>',`The directory to output the translated files to, defaults to "./build"`, './build')
-    .option('-s, --savePath <directory_path>',`The directory to read the source files from, defaults to "./save"`, `${__dirname}/save`) 
+    .option('-s, --savePath <directory_path>',`The directory to read the source files from, defaults to "./save"`, `${process.cwd()}/save`) 
 
     .option('-gt, --githubtoken <token>', 'The GitHub token PAT to use for authentication, default to the value of the GITHUB_PERSONAL_ACCESS_TOKEN environment variable')
     .option('-ok, --openaikey <key>', 'The OpenAI key to use for authentication, default to the value of the OPENAI_API_KEY environment variable')
