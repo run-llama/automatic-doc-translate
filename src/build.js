@@ -140,7 +140,7 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, tar
 :::         
 `);
             }
-            else if (target === 'readme') { 
+            else if (target === 'readme') {
                 lines.unshift(getLanguageMenu(languageCode, language) + '\n\n' + "```" + translationDisclaimer[languageCode] + "```\n");
             }
             else {
