@@ -79,7 +79,7 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, tar
         if (target == 'readme' && file.path !== 'README.md') { 
             continue;
         }
-        
+
         // check if file is translated in target language
         if (!file.doc || file.doc[0][`content_${languageCode}`] === undefined) { 
             console.log('failed to find translation', file.path);
@@ -155,7 +155,7 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, tar
 }
 
 function getLanguageMenu(languageCode, language) { 
-    let md = "\n\n[EN](./README.md)";
+    let md = "\n\n[en](../README.md)";
 
     for (let lang of language) {
         if (lang != languageCode) {
