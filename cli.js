@@ -121,7 +121,8 @@ async function run() {
                         languageCode: langCode,
                         savePath: options.savePath,
                         outputPath: outPath,
-                        prefixToRemove: prefixToRemove
+                        prefixToRemove: prefixToRemove,
+                        target: options.mode
                     }
                 );
             }

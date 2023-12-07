@@ -1,7 +1,7 @@
 const fs = require('fs/promises');
 const mdUtils = require('./mdUtils');
 
-const translationDisclaimer = require('./supportedLanguages.json');
+const translationDisclaimer = require('./supportedLanguagesWarning.json');
 
 /**
 * Corrects the links in a given file for a specific language.
@@ -73,7 +73,7 @@ async function correctLinkInFile(file, languageCode, docDir) {
  *
  * @throws {Error} If a file is not translated in the target language.
  */
-async function buildOutputMd(files, languageCode, targetDir, prefixToRemove) { 
+async function buildOutputMd(files, languageCode, targetDir, prefixToRemove, target) { 
 
     for (let file of files) {
         // check if file is translated in target language
@@ -100,14 +100,33 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove) {
             }
         }
 
-        // add translationDisclaimer[languageCode] before the first heading in the file
-        let disclaimer = translationDisclaimer[languageCode];
-        let firstHeading = translatedMd.match(/^(#{1,6}) /m);
-        if (firstHeading) {
-            translatedMd = translatedMd.replace(firstHeading[0], `\`\`\`${disclaimer}\`\`\`\n\n${firstHeading[0]}`);
-        } else {
-            translatedMd = `\`\`\`${disclaimer}\`\`\`\n\n${translatedMd}`;
+        // add translationDisclaimer[languageCode] AFTER the first heading in the file
+        let lines = translatedMd.split('\n');
+        let firstHeadingFound = false;
+        for (let [index, line] of lines.entries()) {
+            if (line.match(/^#/)) {
+                firstHeadingFound = true;
+            }
+            if (firstHeadingFound) {
+                lines[index] = line + '\n\n' + "```" + translationDisclaimer[languageCode] + "```\n";
+                break;
+            }
         }
+        if (!firstHeadingFound) {
+            if (target === 'docusaurus') {
+                lines.unshift(`
+:::note
+    ${translationDisclaimer[languageCode]}
+:::         
+`);
+
+            }
+            else {
+                lines.unshift("```" + translationDisclaimer[languageCode] + "```\n");
+
+            }
+        }
+        translatedMd = lines.join('\n');
         await fs.writeFile(path, translatedMd, 'utf8');
     }
 }
@@ -122,6 +141,7 @@ async function buildOutputMd(files, languageCode, targetDir, prefixToRemove) {
  * @param {string} options.savePath - The path where the translated documentation should be saved.
  * @param {string} options.outputPath - The path where the output should be written.
  * @param {string} options.prefixToRemove - The prefix to remove from the file paths.
+ * @param {string} options.target - The target doc system, either "manual" or "docusaurus".
  *
  * @returns {Promise<void>} A promise that resolves when the build is complete.
  *
@@ -134,7 +154,8 @@ async function build(options) {
     const savePath = options.savePath;
     const outputPath = options.outputPath;
     const prefixToRemove = options.prefixToRemove;
-   
+    const target = options.target;
+
     let files = [];
     let savepath  = `${savePath}/${repoOwner}/${repoName}.json`;
     try {
@@ -161,7 +182,7 @@ async function build(options) {
         }
     }
     
-    await buildOutputMd(files, languageCode, outputPath, prefixToRemove);
+    await buildOutputMd(files, languageCode, outputPath, prefixToRemove, target);
 }
 
 module.exports = build
