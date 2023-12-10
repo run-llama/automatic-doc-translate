@@ -1,6 +1,6 @@
 {
   "name": "autotranslatedoc",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "A tool to automatically translate documentations.",
   "main": "./cli.js",
   "scripts": {
