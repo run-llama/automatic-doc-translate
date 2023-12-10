@@ -76,10 +76,11 @@ async function getLastFileVersion(owner, repoName, path, filesExtentions = ['.md
  *
  * @returns {Promise<void>} A promise that resolves when the file list has been updated. The updated list is directly modified in the `files` parameter.
  */
-async function listDocumentationFiles(files, owner, repoName, path) {
-   let newFiles = await getLastFileVersion(owner, repoName, path);
+async function listDocumentationFiles(files, owner, repoName, path, onlyThis=null) {
 
-   for (let file of newFiles) { 
+    let newFiles = await getLastFileVersion(owner, repoName, path);
+    // todo: handle onlyThis=['Readme.md', '...'];
+    for (let file of newFiles) { 
         let fileHandledFlag = false;
         for (let [index, oldFile] of files.entries()) {
             if (oldFile.path === file.path && oldFile.sha !== file.sha) {
@@ -100,7 +101,8 @@ async function listDocumentationFiles(files, owner, repoName, path) {
             files.push(file);
         }
 
-   }
+    }
+
 }
 
 /**

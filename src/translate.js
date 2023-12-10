@@ -5,7 +5,8 @@ const { OpenAI }  = require("llamaindex");
 const githubUtils = require('./githubUtils');
 const mdUtils = require('./mdUtils');
 
-const llm = new OpenAI({ model: "gpt-3.5-turbo", temperature: 0,  apiKey: process.env["OPENAI_API_KEY"], maxRetries: 2});
+const llm = new OpenAI({ model: "gpt-3.5-turbo-1106", temperature: 0,  apiKey: process.env["OPENAI_API_KEY"], maxRetries: 2});
+
 
 
 let suportedLanguages = require('./supportedLanguages.json');
@@ -101,16 +102,21 @@ Guidelines:
 Additional Notes:
 - it's a computer doc, build mean 'compile', watch mean 'looking at file that change',
 - Keep the same structure as the original documentation, and retain ALL the links / images.
+- Do not encapsulate the translation in a codeblock (\`\`\`mardown \`\`\`), only output the translation in markdown.
 `,
             },
             {
                 "role": "user",
-                "content": `The markdown to translate (remember do not add extra content or remove content, just translate verbatim).\n Do not expend on content, only translate the documentation. The proposed text to translate may only contain a title, in this case only translate the title. Original in English:\n\n ${text} "\n\nTranslation in ${language}:\n\n`
+                "content": `The markdown to translate (remember do not add extra content or remove content, just translate verbatim).
+Do not expend on content, only translate the documentation.
+The proposed text to translate may only contain a title, in this case only translate the title.
+Do not encapsulate the translation in a codeblock (\`\`\`mardown \`\`\`), only output the translation in markdown.
+Original in English:\n\n ${text} "\n\nTranslation in ${language}:\n\n`
             }
         ];
 
         let chatCompletion = await llm.chat(messages);
-
+        
         translationTree = mdUtils.parseMdStrToTree(removeRepeatedPattern(chatCompletion.message.content));
         
         let linkmatchesTranslated =chatCompletion.message.content.match(/\[.*\]\(.*\)/g);
@@ -182,6 +188,7 @@ async function translateAFile(file, language, code) {
     // translate from bottom up to avoid solo title.
     for (let i = file.doc.length - 1; i >= 0; i--) {
         let block = file.doc[i];
+
         if (block["title_" + code] || block["content_" + code]) {
             // do not retranslate block!
             continue;
@@ -306,7 +313,12 @@ async function translate(options) {
     
     if (loadFile) {
         console.log("Loading files from Github");
-    await githubUtils.listDocumentationFiles(files, repoOwner, repoName, repoDocDir, ['.md', '.mdx']);
+        if (translateMode == 'readme') {
+            await githubUtils.listDocumentationFiles(files, repoOwner, repoName, repoDocDir, ['.md', '.mdx'], ['README.md']);
+        }
+        else {
+            await githubUtils.listDocumentationFiles(files, repoOwner, repoName, repoDocDir, ['.md', '.mdx']);
+        }
         await githubUtils.downloadDocumentationFiles(repoOwner, repoName, files);
     }
 

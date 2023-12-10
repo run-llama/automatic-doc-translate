@@ -224,9 +224,9 @@
             </div>
             <div v-else-if="targetRepository">
                 <div class="navbar">
-                    Translate your doc - {{targetRepository}} -> <select v-model="targetLanguage">
-                        <option value="fr">fr</option>
-                        <option value="zh_cn">zh_cn</option>
+                    Translate your doc - {{targetRepository}} 
+                    <select v-model="targetLanguage">
+                        <option v-for="language in possibleLanguages" :value="language" :selected="language === targetLanguage">{{language}}</option>
                     </select>
                 </div>
                 <div class="file-explorer"> 
@@ -239,11 +239,11 @@
                     <div class='file-overview'>
                         <div class='file-block'  v-for="block in file.doc" v-if="file">      
                             <div class="initial" contenteditable="false">
-                                <pre class="title" v-if="block.title.length"><span v-for="n in block.level" key="n">#</span>{{block.title}}</pre>
+                                <pre class="title" v-if="block.title.length"><span v-for="n in block.level" key="n">#</span> {{block.title}}</pre>
                                 <pre class="content" v-if="block.content.length">{{block.content}}</pre>
                             </div>
                             <div class="translation" v-if="block[targetLanguageTitle].length || block[targetLanguageContent].length">
-                                <pre class="title" v-if="block[targetLanguageTitle].length"><span v-for="n in block.level" key="n">#</span><span contenteditable>{{block[targetLanguageTitle][0]}}</span></pre>
+                                <pre class="title" v-if="block[targetLanguageTitle].length"><span v-for="n in block.level" key="n">#</span> <span contenteditable>{{block[targetLanguageTitle][0]}}</span></pre>
                                 <pre class="content" v-if="block[targetLanguageContent].length" contenteditable>{{block[targetLanguageContent][0]}}</pre>
                             </div>
                         </div>
@@ -282,12 +282,13 @@
                     const files = ref(null);
                     const file = ref(null); // Initialize file as null
                     const targetRepository = ref(""); // "run-llama/llama_index";
-                    const loading = ref(false);
+                    const loading = ref(true);
                     const fileLoaded = ref(false);
                     const inputValue = ref("");
-                    const targetLanguage = ref("fr");
-                    const targetLanguageTitle = ref("title_fr");
-                    const targetLanguageContent = ref("content_fr");
+                    const targetLanguage = ref("");
+                    const targetLanguageTitle = ref("title");
+                    const targetLanguageContent = ref("content");
+                    const possibleLanguages = ref([]);
 
                     watch(targetLanguage, (newVal, oldVal) => {
                         // Update targetLanguageTitle and targetLanguageContent based on newVal
@@ -302,16 +303,35 @@
        
 
                     const translate = async () => {
-                        targetRepository.value = inputValue.value; 
-                        console.log("translate", targetRepository.value);
-                        loading.value = "Translating..." + targetRepository.value;
-                        loading.value = true;
-                        const response = await fetch(targetRepository.value + ".json");
+                        const response = await fetch("/currentSave");
                         const data = await response.json();
-                        files.value = data;
-                        file.value = data[0];
-                        loading.value = false;
+                        let files = data.data;
+                        // filter files to only keep the ones that have a doc (should be server side?);
+                        files = files.filter((file) => {
+                            return file.doc;
+                        });
+
+                        targetRepository.value = data.repoOwner + "/" + data.repoName;
+                        files.value = files;
+                        file.value = files[0];
                         fileLoaded.value = true;
+                        let languages =  [];
+
+                        // extrract translation. Should be in a more generic way?
+                        for (let key in files[0].doc[0]) {
+                            // extract the code in  "title_CODE" with a regex
+                            let match = key.match(/title_(.*)/);
+                            if (match) {
+                                languages.push(match[1]);
+                            }
+                        }
+                     
+                        if (languages.length) {
+                            possibleLanguages.value = languages;
+                            targetLanguage.value = languages[0];
+                        }
+                       
+                        loading.value = false;
                     };
 
                     const fileStatusClass = (item) => {
@@ -323,7 +343,7 @@
                         ;   
                     };
                         
-                    
+                    translate();
                     return {
                         files,
                         file,
@@ -334,6 +354,7 @@
                         targetLanguage,
                         targetLanguageTitle,
                         targetLanguageContent,
+                        possibleLanguages,
                         changeFile,
                         translate,
                         fileStatusClass

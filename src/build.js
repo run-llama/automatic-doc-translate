@@ -4,7 +4,6 @@ const mdUtils = require('./mdUtils');
 
 const supportedLanguages = require('./supportedLanguages.json');
 const translationDisclaimer = require('./supportedLanguagesWarning.json');
-const e = require('express');
 
 /**
 * Corrects the links in a given file for a specific language.
